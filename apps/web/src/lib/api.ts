@@ -4,7 +4,9 @@ import {
   featuredResources,
   findResourceById,
   membershipPlans,
+  type PasswordLoginInput,
   platformHighlights,
+  type RegisterBuyerInput,
   resourceDetails,
   sellerDashboard,
   type ApiResponse,
@@ -107,6 +109,14 @@ export async function getDemoUsers(): Promise<DemoUser[]> {
 
 export async function loginDemoUser(userId: string): Promise<AuthSession | null> {
   return postJson("/auth/login", { userId });
+}
+
+export async function registerBuyerAccount(payload: RegisterBuyerInput): Promise<AuthSession | null> {
+  return postJson("/auth/register", payload);
+}
+
+export async function loginBuyerAccount(payload: PasswordLoginInput): Promise<AuthSession | null> {
+  return postJson("/auth/password-login", payload);
 }
 
 export async function getBuyerOrders(token: string): Promise<WorkflowOrderRecord[]> {

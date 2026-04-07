@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { ResourceType } from "@ziyu/shared";
 import { createOrder } from "../../lib/api";
 import { getStoredDemoSession } from "../../lib/demo-session";
 
 export function PurchaseAction({ resourceId, resourceType }: { resourceId: string; resourceType: ResourceType }) {
+  const router = useRouter();
   const [message, setMessage] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
@@ -18,7 +20,14 @@ export function PurchaseAction({ resourceId, resourceType }: { resourceId: strin
     const session = getStoredDemoSession();
 
     if (!session) {
-      setMessage("请先登录，再下单购买用户贡献资源。");
+      setMessage("购买前请先注册并登录买家账号。正在跳转注册页...");
+      router.push("/register");
+      return;
+    }
+
+    if (session.user.role !== "buyer") {
+      setMessage("当前账号不是买家账号，请先注册或登录买家账号后再购买。");
+      router.push("/login");
       return;
     }
 

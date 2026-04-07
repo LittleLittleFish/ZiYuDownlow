@@ -21,6 +21,7 @@ export default async function HomePage() {
           </p>
           <div className="cta-row">
             <Link className="button primary" href="/resources">查看资源</Link>
+            <Link className="button secondary" href="/register">先注册后购买</Link>
             <Link className="button secondary" href="/login">用户登录</Link>
             <Link className="button secondary" href="/seller">卖家中心</Link>
             <a className="button secondary" href="http://127.0.0.1:3001/login" target="_blank" rel="noreferrer">管理员登录</a>

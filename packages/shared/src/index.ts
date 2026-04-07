@@ -128,12 +128,24 @@ export interface DemoUser {
   name: string;
   role: UserPortalRole;
   sellerId?: string;
+  email?: string;
   description: string;
 }
 
 export interface AuthSession {
   token: string;
   user: DemoUser;
+}
+
+export interface RegisterBuyerInput {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface PasswordLoginInput {
+  email: string;
+  password: string;
 }
 
 export interface CreateOrderInput {

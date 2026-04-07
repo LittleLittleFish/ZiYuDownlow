@@ -42,7 +42,10 @@ db.exec(`
     name TEXT NOT NULL,
     role TEXT NOT NULL,
     seller_id TEXT,
-    description TEXT NOT NULL
+    description TEXT NOT NULL,
+    email TEXT,
+    password_hash TEXT,
+    created_at TEXT
   );
 
   CREATE TABLE IF NOT EXISTS sessions (
@@ -108,6 +111,20 @@ db.exec(`
     note TEXT
   );
 `);
+
+for (const statement of [
+  "ALTER TABLE users ADD COLUMN email TEXT",
+  "ALTER TABLE users ADD COLUMN password_hash TEXT",
+  "ALTER TABLE users ADD COLUMN created_at TEXT"
+]) {
+  try {
+    db.exec(statement);
+  } catch {
+    // Column already exists.
+  }
+}
+
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users(email) WHERE email IS NOT NULL");
 
 const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
 

@@ -1,0 +1,7 @@
+# IP mode keeps direct port access.
+# Current public URLs:
+# Web: http://45.197.145.82:3000
+# Admin: http://45.197.145.82:3001
+# API: http://45.197.145.82:4000
+#
+# Switch DEPLOY_MODE=domain in deploy/site-config.env to generate hostname-based Nginx config.

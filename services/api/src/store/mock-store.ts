@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import {
   type AdminOverview,
   type AuthSession,
@@ -8,7 +8,9 @@ import {
   type DashboardStat,
   type DemoUser,
   type DeliverOrderInput,
+  type PasswordLoginInput,
   type RefundRequestInput,
+  type RegisterBuyerInput,
   type ResourceCard,
   type ResourceDetail,
   type ResourceType,
@@ -86,8 +88,38 @@ type UserRow = {
   name: string;
   role: DemoUser["role"];
   seller_id: string | null;
+  email: string | null;
+  password_hash: string | null;
   description: string;
+  created_at: string | null;
 };
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const derived = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${derived}`;
+}
+
+function verifyPassword(password: string, storedHash: string): boolean {
+  const [salt, originalHash] = storedHash.split(":");
+
+  if (!salt || !originalHash) {
+    return false;
+  }
+
+  const derived = scryptSync(password, salt, 64);
+  const original = Buffer.from(originalHash, "hex");
+
+  if (derived.length !== original.length) {
+    return false;
+  }
+
+  return timingSafeEqual(derived, original);
+}
 
 function formatCurrency(amount: number): string {
   return `¥${(amount / 100).toFixed(2)}`;
@@ -112,6 +144,7 @@ function toDemoUser(row: UserRow): DemoUser {
     name: row.name,
     role: row.role,
     sellerId: row.seller_id ?? undefined,
+    email: row.email ?? undefined,
     description: row.description
   };
 }
@@ -179,13 +212,18 @@ function toWithdrawalRow(row: WithdrawalDatabaseRow): WithdrawalRow {
 }
 
 function getUserById(userId: string): DemoUser | undefined {
-  const row = db.prepare("SELECT id, name, role, seller_id, description FROM users WHERE id = ?").get(userId) as UserRow | undefined;
+  const row = db.prepare("SELECT id, name, role, seller_id, email, password_hash, description, created_at FROM users WHERE id = ?").get(userId) as UserRow | undefined;
   return row ? toDemoUser(row) : undefined;
+}
+
+function getUserRowByEmail(email: string): UserRow | undefined {
+  const row = db.prepare("SELECT id, name, role, seller_id, email, password_hash, description, created_at FROM users WHERE email = ?").get(normalizeEmail(email)) as UserRow | undefined;
+  return row;
 }
 
 function getUserByToken(token: string): DemoUser | undefined {
   const row = db.prepare(`
-    SELECT users.id, users.name, users.role, users.seller_id, users.description
+    SELECT users.id, users.name, users.role, users.seller_id, users.email, users.password_hash, users.description, users.created_at
     FROM sessions
     INNER JOIN users ON users.id = sessions.user_id
     WHERE sessions.token = ?
@@ -226,7 +264,7 @@ function buildSellerMetrics(sellerId: string): DashboardStat[] {
 }
 
 export function listDemoUsers(): DemoUser[] {
-  const rows = db.prepare("SELECT id, name, role, seller_id, description FROM users ORDER BY role, id").all() as UserRow[];
+  const rows = db.prepare("SELECT id, name, role, seller_id, email, password_hash, description, created_at FROM users WHERE role != 'buyer' ORDER BY role, id").all() as UserRow[];
   return rows.map(toDemoUser);
 }
 
@@ -241,6 +279,56 @@ export function loginAs(userId: string): AuthSession | undefined {
   db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").run(token, user.id, nowLabel());
 
   return { token, user };
+}
+
+export function registerBuyer(input: RegisterBuyerInput): AuthSession | undefined {
+  const email = normalizeEmail(input.email);
+
+  if (getUserRowByEmail(email)) {
+    return undefined;
+  }
+
+  const user: DemoUser = {
+    id: `buyer-${Date.now()}`,
+    name: input.name.trim(),
+    role: "buyer",
+    email,
+    description: "注册买家账号，可登录后购买资源并查看订单。"
+  };
+
+  db.prepare(`
+    INSERT INTO users (id, name, role, seller_id, email, password_hash, description, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    user.id,
+    user.name,
+    user.role,
+    null,
+    email,
+    hashPassword(input.password),
+    user.description,
+    nowLabel()
+  );
+
+  const token = randomUUID();
+  db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").run(token, user.id, nowLabel());
+  return { token, user };
+}
+
+export function loginWithPassword(input: PasswordLoginInput): AuthSession | undefined {
+  const row = getUserRowByEmail(input.email);
+
+  if (!row || !row.password_hash || row.role !== "buyer") {
+    return undefined;
+  }
+
+  if (!verifyPassword(input.password, row.password_hash)) {
+    return undefined;
+  }
+
+  const token = randomUUID();
+  db.prepare("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)").run(token, row.id, nowLabel());
+  return { token, user: toDemoUser(row) };
 }
 
 export function getSessionByToken(token: string): AuthSession | undefined {
@@ -353,7 +441,7 @@ export function listSellerOrders(sellerId: string): WorkflowOrderRecord[] {
 }
 
 export function createOrder(user: DemoUser, input: CreateOrderInput): WorkflowOrderRecord | undefined {
-  if (user.role === "admin") {
+  if (user.role !== "buyer") {
     return undefined;
   }
 
