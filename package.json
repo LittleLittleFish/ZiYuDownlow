@@ -1,0 +1,23 @@
+{
+  "name": "ziyu-downlow",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @ziyu/web",
+    "dev:admin": "npm run dev --workspace @ziyu/admin",
+    "dev:api": "npm run dev --workspace @ziyu/api",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "deploy:render-config": "bash scripts/render-deploy-config.sh",
+    "package:release": "bash scripts/package-release.sh"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

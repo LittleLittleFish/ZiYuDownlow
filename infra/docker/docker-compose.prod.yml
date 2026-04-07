@@ -1,0 +1,66 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/api.Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+        NPM_FETCH_RETRIES: ${NPM_FETCH_RETRIES:-5}
+        NPM_FETCH_RETRY_MINTIMEOUT: ${NPM_FETCH_RETRY_MINTIMEOUT:-20000}
+        NPM_FETCH_RETRY_MAXTIMEOUT: ${NPM_FETCH_RETRY_MAXTIMEOUT:-120000}
+    env_file:
+      - ../../.env
+    environment:
+      API_PORT: 4000
+    volumes:
+      - api-data:/app/services/api/data
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_ADMIN_BASE_URL: ${NEXT_PUBLIC_ADMIN_BASE_URL}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+        NPM_FETCH_RETRIES: ${NPM_FETCH_RETRIES:-5}
+        NPM_FETCH_RETRY_MINTIMEOUT: ${NPM_FETCH_RETRY_MINTIMEOUT:-20000}
+        NPM_FETCH_RETRY_MAXTIMEOUT: ${NPM_FETCH_RETRY_MAXTIMEOUT:-120000}
+    env_file:
+      - ../../.env
+    environment:
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: ../..
+      dockerfile: infra/docker/admin.Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+        NPM_FETCH_RETRIES: ${NPM_FETCH_RETRIES:-5}
+        NPM_FETCH_RETRY_MINTIMEOUT: ${NPM_FETCH_RETRY_MINTIMEOUT:-20000}
+        NPM_FETCH_RETRY_MAXTIMEOUT: ${NPM_FETCH_RETRY_MAXTIMEOUT:-120000}
+    env_file:
+      - ../../.env
+    environment:
+      PORT: 3001
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      - api
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+volumes:
+  api-data:
