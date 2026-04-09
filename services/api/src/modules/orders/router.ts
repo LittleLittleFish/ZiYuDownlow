@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
-import { type ApiResponse, type ConfirmOrderInput, type CreateOrderInput, type RefundRequestInput, type ResolveRefundInput, type WorkflowOrderRecord } from "@ziyu/shared";
+import { type ApiResponse, type ConfirmOrderInput, type CreateOrderInput, type CreateOrderResult, type RefundRequestInput, type ResolveRefundInput, type WorkflowOrderRecord } from "@ziyu/shared";
 import { confirmOrder, createOrder, listBuyerOrders, requestRefund, resolveRefund } from "../../store/mock-store.js";
+import { createYzfPayPaymentForm, isYzfPayConfigured } from "../payments/yzfpay.js";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../auth/middleware.js";
 
 export const ordersRouter = Router();
@@ -44,7 +45,7 @@ ordersRouter.get("/mine", requireAuth, (request: AuthenticatedRequest, response)
   response.json(payload);
 });
 
-ordersRouter.post("/", requireAuth, requireRole(["buyer", "seller"]), (request: AuthenticatedRequest, response) => {
+ordersRouter.post("/", requireAuth, requireRole("buyer"), (request: AuthenticatedRequest, response) => {
   const parsed = createOrderSchema.safeParse(request.body);
 
   if (!parsed.success) {
@@ -71,10 +72,24 @@ ordersRouter.post("/", requireAuth, requireRole(["buyer", "seller"]), (request: 
     return;
   }
 
+  if (!isYzfPayConfigured()) {
+    response.status(503).json({
+      success: false,
+      error: {
+        code: "PAYMENT_CONFIG_MISSING",
+        message: "支付配置未完成，暂时无法发起支付。"
+      }
+    } satisfies ApiResponse<CreateOrderResult>);
+    return;
+  }
+
   response.status(201).json({
     success: true,
-    data: order
-  } satisfies ApiResponse<WorkflowOrderRecord>);
+    data: {
+      order,
+      paymentForm: createYzfPayPaymentForm(order)
+    }
+  } satisfies ApiResponse<CreateOrderResult>);
 });
 
 ordersRouter.post("/:id/confirm", requireAuth, requireRole(["buyer", "seller"]), (request: AuthenticatedRequest, response) => {

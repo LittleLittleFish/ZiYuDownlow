@@ -5,8 +5,8 @@ export default function OrdersPage() {
     <main>
       <section className="page-header card">
         <p className="eyebrow">买家订单中心</p>
-        <h1>支付成功后在订单页查看卖家联系方式</h1>
-        <p className="subcopy">这里已经接通完整演示链路：买家下单后订单进入待卖家发货，卖家发货后买家可确认收货，订单完成后自动视为进入分佣阶段。</p>
+        <h1>订单内展示支付结果、回调信息与后续履约状态</h1>
+        <p className="subcopy">买家下单后先跳转支付，异步回调验签成功后订单自动进入待卖家发货，并在订单详情展示平台订单号、渠道单号、支付完成时间和回调入库时间。</p>
       </section>
       <AccountCenter />
     </main>

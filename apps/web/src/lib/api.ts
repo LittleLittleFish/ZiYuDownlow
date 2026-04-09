@@ -1,5 +1,6 @@
 import {
   type AuthSession,
+  type CreateOrderResult,
   demoUsers,
   featuredResources,
   findResourceById,
@@ -123,7 +124,7 @@ export async function getBuyerOrders(token: string): Promise<WorkflowOrderRecord
   return requestJson("/orders/mine", [], token);
 }
 
-export async function createOrder(token: string, buyerId: string, resourceId: string): Promise<WorkflowOrderRecord | null> {
+export async function createOrder(token: string, buyerId: string, resourceId: string): Promise<CreateOrderResult | null> {
   return postJsonWithToken("/orders", { buyerId, resourceId }, token);
 }
 

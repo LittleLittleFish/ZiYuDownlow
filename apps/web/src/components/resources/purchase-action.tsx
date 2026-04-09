@@ -16,6 +16,24 @@ export function PurchaseAction({ resourceId, resourceType }: { resourceId: strin
     return <Link className="button primary" href="/membership">开通会员获取官方资源</Link>;
   }
 
+  function submitPaymentForm(actionUrl: string, fields: Record<string, string>) {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = actionUrl;
+    form.style.display = "none";
+
+    Object.entries(fields).forEach(([key, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+
   function handlePurchase() {
     const session = getStoredDemoSession();
 
@@ -33,14 +51,15 @@ export function PurchaseAction({ resourceId, resourceType }: { resourceId: strin
 
     startTransition(() => {
       void (async () => {
-        const order = await createOrder(session.token, session.user.id, resourceId);
+        const result = await createOrder(session.token, session.user.id, resourceId);
 
-        if (!order) {
+        if (!result) {
           setMessage("下单失败，资源可能尚未审核通过。请稍后重试。");
           return;
         }
 
-        setMessage(`下单成功，订单 ${order.id} 已创建，可前往订单中心查看联系方式。`);
+        setMessage(`订单 ${result.order.id} 已创建，正在跳转支付页面。`);
+        submitPaymentForm(result.paymentForm.actionUrl, result.paymentForm.fields);
       })();
     });
   }

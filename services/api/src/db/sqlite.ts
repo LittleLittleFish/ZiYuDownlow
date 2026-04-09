@@ -94,6 +94,14 @@ db.exec(`
     contact TEXT NOT NULL,
     delivery_note TEXT NOT NULL,
     created_at TEXT NOT NULL,
+    payment_gateway TEXT,
+    payment_type TEXT,
+    payment_trade_no TEXT,
+    payment_api_trade_no TEXT,
+    payment_param TEXT,
+    payment_buyer TEXT,
+    payment_notified_at TEXT,
+    payment_completed_at TEXT,
     refund_reason TEXT,
     refund_review_note TEXT
   );
@@ -115,7 +123,15 @@ db.exec(`
 for (const statement of [
   "ALTER TABLE users ADD COLUMN email TEXT",
   "ALTER TABLE users ADD COLUMN password_hash TEXT",
-  "ALTER TABLE users ADD COLUMN created_at TEXT"
+  "ALTER TABLE users ADD COLUMN created_at TEXT",
+  "ALTER TABLE orders ADD COLUMN payment_gateway TEXT",
+  "ALTER TABLE orders ADD COLUMN payment_type TEXT",
+  "ALTER TABLE orders ADD COLUMN payment_trade_no TEXT",
+  "ALTER TABLE orders ADD COLUMN payment_api_trade_no TEXT",
+  "ALTER TABLE orders ADD COLUMN payment_param TEXT",
+  "ALTER TABLE orders ADD COLUMN payment_buyer TEXT",
+  "ALTER TABLE orders ADD COLUMN payment_notified_at TEXT",
+  "ALTER TABLE orders ADD COLUMN payment_completed_at TEXT"
 ]) {
   try {
     db.exec(statement);
@@ -150,11 +166,13 @@ if (userCount.count === 0) {
     INSERT INTO orders (
       id, buyer_id, buyer_name, seller_id, seller_name, resource_id, resource_title,
       amount_label, amount_value, status, payment_status, contact, delivery_note, created_at,
-      refund_reason, refund_review_note
+      payment_gateway, payment_type, payment_trade_no, payment_api_trade_no, payment_param,
+      payment_buyer, payment_notified_at, payment_completed_at, refund_reason, refund_review_note
     ) VALUES (
       @id, @buyerId, @buyerName, @sellerId, @sellerName, @resourceId, @resourceTitle,
       @amountLabel, @amountValue, @status, @paymentStatus, @contact, @deliveryNote, @createdAt,
-      @refundReason, @refundReviewNote
+      @paymentGateway, @paymentType, @paymentTradeNo, @paymentApiTradeNo, @paymentParam,
+      @paymentBuyer, @paymentNotifiedAt, @paymentCompletedAt, @refundReason, @refundReviewNote
     )
   `);
 
@@ -225,6 +243,14 @@ if (userCount.count === 0) {
       contact: "微信: design-lab / QQ: 172009",
       deliveryNote: "已通过微信发送提取码：A1B2，网盘目录包含按风格整理的素材文件夹。",
       createdAt: "2026-04-01 21:14",
+      paymentGateway: "yzfpay",
+      paymentType: "alipay",
+      paymentTradeNo: "seed-trade-20260401-001",
+      paymentApiTradeNo: "seed-api-20260401-001",
+      paymentParam: "community-001",
+      paymentBuyer: "seed-buyer",
+      paymentNotifiedAt: "2026-04-01 21:15",
+      paymentCompletedAt: "2026-04-01 21:15",
       refundReason: null,
       refundReviewNote: null
     });

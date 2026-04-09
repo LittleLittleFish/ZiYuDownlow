@@ -148,6 +148,17 @@ export interface PasswordLoginInput {
   password: string;
 }
 
+export interface PaymentFormRequest {
+  actionUrl: string;
+  method: "POST";
+  fields: Record<string, string>;
+}
+
+export interface CreateOrderResult {
+  order: WorkflowOrderRecord;
+  paymentForm: PaymentFormRequest;
+}
+
 export interface CreateOrderInput {
   buyerId: string;
   resourceId: string;
@@ -216,6 +227,14 @@ export interface WorkflowOrderRecord {
   contact: string;
   deliveryNote: string;
   createdAt: string;
+  paymentGateway?: string;
+  paymentType?: string;
+  paymentTradeNo?: string;
+  paymentApiTradeNo?: string;
+  paymentParam?: string;
+  paymentBuyer?: string;
+  paymentNotifiedAt?: string;
+  paymentCompletedAt?: string;
   refundReason?: string;
   refundReviewNote?: string;
 }

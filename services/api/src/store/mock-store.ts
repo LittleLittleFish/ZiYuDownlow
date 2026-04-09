@@ -66,8 +66,27 @@ type OrderRow = {
   contact: string;
   delivery_note: string;
   created_at: string;
+  payment_gateway: string | null;
+  payment_type: string | null;
+  payment_trade_no: string | null;
+  payment_api_trade_no: string | null;
+  payment_param: string | null;
+  payment_buyer: string | null;
+  payment_notified_at: string | null;
+  payment_completed_at: string | null;
   refund_reason: string | null;
   refund_review_note: string | null;
+};
+
+type PaymentSuccessInput = {
+  paymentGateway: string;
+  paymentType?: string;
+  paymentTradeNo: string;
+  paymentApiTradeNo?: string;
+  paymentParam?: string;
+  paymentBuyer?: string;
+  paymentNotifiedAt: string;
+  paymentCompletedAt?: string;
 };
 
 type WithdrawalDatabaseRow = {
@@ -191,6 +210,14 @@ function toOrderRecord(row: OrderRow): WorkflowOrderRecord {
     contact: row.contact,
     deliveryNote: row.delivery_note,
     createdAt: row.created_at,
+    paymentGateway: row.payment_gateway ?? undefined,
+    paymentType: row.payment_type ?? undefined,
+    paymentTradeNo: row.payment_trade_no ?? undefined,
+    paymentApiTradeNo: row.payment_api_trade_no ?? undefined,
+    paymentParam: row.payment_param ?? undefined,
+    paymentBuyer: row.payment_buyer ?? undefined,
+    paymentNotifiedAt: row.payment_notified_at ?? undefined,
+    paymentCompletedAt: row.payment_completed_at ?? undefined,
     refundReason: row.refund_reason ?? undefined,
     refundReviewNote: row.refund_review_note ?? undefined
   };
@@ -440,6 +467,11 @@ export function listSellerOrders(sellerId: string): WorkflowOrderRecord[] {
   return rows.map(toOrderRecord);
 }
 
+export function getOrderById(orderId: string): WorkflowOrderRecord | undefined {
+  const row = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId) as OrderRow | undefined;
+  return row ? toOrderRecord(row) : undefined;
+}
+
 export function createOrder(user: DemoUser, input: CreateOrderInput): WorkflowOrderRecord | undefined {
   if (user.role !== "buyer") {
     return undefined;
@@ -461,9 +493,9 @@ export function createOrder(user: DemoUser, input: CreateOrderInput): WorkflowOr
     resourceTitle: resource.title,
     amountLabel: resource.priceLabel,
     amountValue: resource.priceAmount,
-    status: "已支付待卖家发货",
-    paymentStatus: "支付成功，已展示卖家联系方式",
-    contact: resource.contact ?? "待补充联系方式",
+    status: "待支付",
+    paymentStatus: "待支付，等待完成支付",
+    contact: "支付成功后显示",
     deliveryNote: "",
     createdAt: nowLabel()
   };
@@ -472,8 +504,9 @@ export function createOrder(user: DemoUser, input: CreateOrderInput): WorkflowOr
     INSERT INTO orders (
       id, buyer_id, buyer_name, seller_id, seller_name, resource_id, resource_title,
       amount_label, amount_value, status, payment_status, contact, delivery_note, created_at,
-      refund_reason, refund_review_note
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      payment_gateway, payment_type, payment_trade_no, payment_api_trade_no, payment_param,
+      payment_buyer, payment_notified_at, payment_completed_at, refund_reason, refund_review_note
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     order.id,
     order.buyerId,
@@ -490,10 +523,55 @@ export function createOrder(user: DemoUser, input: CreateOrderInput): WorkflowOr
     order.deliveryNote,
     order.createdAt,
     null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
     null
   );
 
   return order;
+}
+
+export function markOrderPaid(orderId: string, input: PaymentSuccessInput): WorkflowOrderRecord | undefined {
+  const found = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId) as OrderRow | undefined;
+
+  if (!found) {
+    return undefined;
+  }
+
+  const resource = getResource(found.resource_id);
+  const nextContact = resource?.contact ?? found.contact;
+  const nextStatus = found.status === "待支付" ? "已支付待卖家发货" : found.status;
+  const nextPaymentStatus = found.status === "待支付" ? "支付成功，等待卖家发货" : found.payment_status;
+
+  db.prepare(`
+    UPDATE orders
+    SET status = ?, payment_status = ?, contact = ?,
+        payment_gateway = ?, payment_type = ?, payment_trade_no = ?, payment_api_trade_no = ?,
+        payment_param = ?, payment_buyer = ?, payment_notified_at = ?, payment_completed_at = ?
+    WHERE id = ?
+  `).run(
+    nextStatus,
+    nextPaymentStatus,
+    nextContact,
+    input.paymentGateway,
+    input.paymentType ?? found.payment_type,
+    input.paymentTradeNo,
+    input.paymentApiTradeNo ?? found.payment_api_trade_no,
+    input.paymentParam ?? found.payment_param,
+    input.paymentBuyer ?? found.payment_buyer,
+    input.paymentNotifiedAt,
+    input.paymentCompletedAt ?? found.payment_completed_at,
+    orderId
+  );
+
+  const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId) as OrderRow | undefined;
+  return updated ? toOrderRecord(updated) : undefined;
 }
 
 export function deliverOrder(user: DemoUser, orderId: string, input: DeliverOrderInput): WorkflowOrderRecord | undefined {

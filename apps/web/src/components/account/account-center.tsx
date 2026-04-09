@@ -130,8 +130,14 @@ export function AccountCenter() {
                 </div>
                 <p className="muted">订单号：{order.id}</p>
                 <p className="muted">卖家：{order.sellerName}</p>
-                <p className="muted">联系方式：{order.contact}</p>
+                <p className="muted">联系方式：{order.status === "待支付" ? "支付成功后显示" : order.contact}</p>
                 <p className="muted">发货说明：{order.deliveryNote || "卖家尚未发货"}</p>
+                <p className="muted">支付状态：{order.paymentStatus}</p>
+                {order.paymentType ? <p className="muted">支付方式：{order.paymentType}</p> : null}
+                {order.paymentTradeNo ? <p className="muted">平台订单号：{order.paymentTradeNo}</p> : null}
+                {order.paymentApiTradeNo ? <p className="muted">渠道单号：{order.paymentApiTradeNo}</p> : null}
+                {order.paymentCompletedAt ? <p className="muted">支付完成时间：{order.paymentCompletedAt}</p> : null}
+                {order.paymentNotifiedAt ? <p className="muted">回调入库时间：{order.paymentNotifiedAt}</p> : null}
                 {order.status !== "已完成" && order.status !== "已退款" ? (
                   <textarea
                     rows={2}
